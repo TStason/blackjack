@@ -44,7 +44,9 @@ class GameBloc extends Bloc<CounterEvent, GameState> {
       case PlayerWin _:
       case Initial _:
         Deck deck = Deck();
-        Player dealer = Player(hand: [deck.hit(), deck.hit()]);
+        final dealerHiddenCard = deck.hit();
+        dealerHiddenCard.isHidden = true;
+        Player dealer = Player(hand: [dealerHiddenCard, deck.hit()]);
         Player player = Player(hand: [deck.hit(), deck.hit()]);
         // bool dealerBlackJack = _isBlackJack(dealer.hand);
         // if (dealerBlackJack) {
@@ -98,6 +100,9 @@ class GameBloc extends Bloc<CounterEvent, GameState> {
   GameState _playerHold(GameState currentState) {
     switch (currentState) {
       case PlayerDraw s1: {
+        // TODO: test
+        s1.dealer.hand.first.isHidden = false;
+        s1.dealer.hand.first.animateHidden = true;
         if (_isOverflow(s1.dealer.hand)) {
           return PlayerWin(
               deck: s1.deck,
@@ -124,6 +129,7 @@ class GameBloc extends Bloc<CounterEvent, GameState> {
   GameState _dealerHitCard(GameState currentState) {
     switch (currentState) {
       case DealerDraw s1:
+        s1.dealer.hand.first.animateHidden = false;
         // TODO: apply dealer strategy
         if (_canDealerHold(s1.dealer.hand)) {
           int playerValue = _getValue(s1.player.hand);
@@ -265,6 +271,8 @@ class Deck {
 class PlayingCard {
   int value;
   CardSuit suite;
+  bool isHidden = false;
+  bool animateHidden = false;
 
   PlayingCard({required this.value, required this.suite});
 }

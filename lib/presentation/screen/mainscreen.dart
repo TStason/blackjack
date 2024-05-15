@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme/theme.dart';
+import '../widget/animated_card.dart';
 import 'gameblock.dart';
 
 class MainScreen extends StatelessWidget {
@@ -37,7 +37,7 @@ class CounterView extends StatelessWidget {
               case PlayerDraw s1: widget = _renderPlayerDraw(s1, theme);
               case DealerDraw s1:
               // TODO: send delayed action
-                Future.delayed(const Duration(seconds: 2),() => {
+                Future.delayed(const Duration(seconds: 1),() => {
                   context.read<GameBloc>().add(DealerHitCard())
                 });
                 widget = _renderDealerDraw(s1, theme);
@@ -58,7 +58,7 @@ class CounterView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         children: <Widget>[
           FloatingActionButton(
-            child: Text("Take", style: theme.textTheme.displayLarge,),
+            child: Text("T", style: theme.textTheme.displayLarge,),
             // child: const Icon(Icons.add),
             onPressed: () {
               context.read<GameBloc>().add(PlayerHitCard());
@@ -66,7 +66,7 @@ class CounterView extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           FloatingActionButton(
-            child: Text("Hold", style: theme.textTheme.displayLarge,),
+            child: Text("H", style: theme.textTheme.displayLarge,),
             // child: const Icon(Icons.remove),
             onPressed: () {
               context.read<GameBloc>().add(PlayerHold());
@@ -85,8 +85,15 @@ class CounterView extends StatelessWidget {
   }
 
   Widget _renderInitialState(ThemeData theme, VoidCallback onPressed) {
+    final jack = CourtCard(
+        value: 0,
+        type: Court.JACK,
+        suite: CardSuit.SPADES
+    );
+    jack.animateHidden = true;
     return Container(
       color: theme.scaffoldBackgroundColor,
+      alignment: Alignment.center,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -97,12 +104,10 @@ class CounterView extends StatelessWidget {
                 style: theme.textTheme.displayLarge,
               )
           ),
-          SvgPicture.asset(
-            "images/cards/clubs_2.svg",
-            semanticsLabel: "My SVG Image",
-            height: 150,
-            width: 105,
-          )
+          FlippedPlayingCard(
+              card: jack,
+            isActive: true,
+          ),
         ],
       ),
     );
@@ -126,13 +131,7 @@ class CounterView extends StatelessWidget {
     return _renderGameStarted(state, theme);
   }
 
-  Widget _getPlayerRows(Started state, ThemeData theme, bool isDealer) {
-    final List<PlayingCard> hand;
-    if (isDealer) {
-      hand = state.dealer.hand;
-    } else {
-      hand = state.player.hand;
-    }
+  Widget _getCardRows(List<PlayingCard> hand, ThemeData theme, bool isDealer) {
     List<Row> playerRows = [];
     List<Widget> playerCards = [];
     var rowCount = 0;
@@ -145,25 +144,16 @@ class CounterView extends StatelessWidget {
         playerCards.clear();
         rowCount = 0;
       }
-      if (i == 1 && isDealer && state is PlayerDraw) {
-        playerCards.add(
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-              child: Image.asset(
-                theme.suitAsset,
-                height: 150,
-                width: 105,
-              ),
-            )
-        );
-      } else {
-        playerCards.add(
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-              child: _getCardOf(hand[i]),
-            )
-        );
-      }
+      playerCards.add(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5),
+            child: FlippedPlayingCard(
+              key: ValueKey(hand[i].hashCode + hand[i].value.hashCode + hand[i].isHidden.hashCode),
+              card: hand[i],
+              isActive: false,
+            ),
+          )
+      );
 
       rowCount++;
     }
@@ -180,38 +170,6 @@ class CounterView extends StatelessWidget {
   }
 
   Widget _renderGameStarted(Started state, ThemeData theme) {
-    List<Widget> dealerCards = [];
-    // for (var element in state.dealer.hand) {
-    //   // && state is PlayerDraw
-    //   if (state.dealer.hand.first == element && state is PlayerDraw) {
-    //     dealerCards.add(
-    //         Container(
-    //           padding: const EdgeInsets.symmetric(horizontal: 5),
-    //           child: Image.asset(
-    //             "images/cards/suit_red.png",
-    //             height: 150,
-    //             width: 105,
-    //           ),
-    //         )
-    //     );
-    //     continue;
-    //   }
-    //   dealerCards.add(
-    //       Container(
-    //         padding: const EdgeInsets.symmetric(horizontal: 5),
-    //         child: _getCardOf(element),
-    //       )
-    //   );
-    // }
-    // List<Widget> playerCards = [];
-    // for (var element in state.player.hand) {
-    //   playerCards.add(
-    //       Container(
-    //         padding: const EdgeInsets.symmetric(horizontal: 5),
-    //         child: _getCardOf(element),
-    //       )
-    //   );
-    // }
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -219,40 +177,14 @@ class CounterView extends StatelessWidget {
           "Dealer",
           style: theme.textTheme.displayLarge,
         ),
-        _getPlayerRows(state, theme, true),
-        // Row(
-        //   mainAxisAlignment: MainAxisAlignment.center,
-        //   children: dealerCards,
-        // ),
+        _getCardRows(state.dealer.hand, theme, true),
         Text(
           "Player",
           style: theme.textTheme.displayLarge,
         ),
-        _getPlayerRows(state, theme, false),
-        // Row(
-        //   mainAxisAlignment: MainAxisAlignment.center,
-        //   children: playerCards,
-        // ),
+        _getCardRows(state.player.hand, theme, false),
       ],
     );
-  }
-
-  Widget _getCardOf(PlayingCard element) {
-    Widget result;
-    if (element is CourtCard) {
-      result = Image.asset(
-        element.asset,
-        height: 150,
-        width: 105,
-      );
-    } else {
-      result = SvgPicture.asset(
-        element.asset,
-        height: 150,
-        width: 105,
-      );
-    }
-    return result;
   }
 
   void showEndGameDialog(BuildContext context, String text) {
