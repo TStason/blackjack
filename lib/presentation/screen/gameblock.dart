@@ -80,10 +80,10 @@ class GameBloc extends Bloc<CounterEvent, GameState> {
           );
         } else if (_isBlackJack(s1.player.hand)) {
           // TODO: stop player hit and start dealer draw
-          return PlayerWin(
+          return DealerDraw(
               deck: s1.deck,
-              dealer: s1.dealer,
-              player: s1.player
+              player: s1.player,
+              dealer: s1.dealer
           );
         }
         return PlayerDraw(
@@ -124,8 +124,26 @@ class GameBloc extends Bloc<CounterEvent, GameState> {
   GameState _dealerHitCard(GameState currentState) {
     switch (currentState) {
       case DealerDraw s1:
-        s1.dealer.hand.add(s1.deck.hit());
         // TODO: apply dealer strategy
+        if (_canDealerHold(s1.dealer.hand)) {
+          int playerValue = _getValue(s1.player.hand);
+          int dealerValue = _getValue(s1.dealer.hand);
+          if (playerValue > dealerValue) {
+            return PlayerWin(
+                deck: s1.deck,
+                dealer: s1.dealer,
+                player: s1.player
+            );
+          } else {
+            return DealerWin(
+                deck: s1.deck,
+                dealer: s1.dealer,
+                player: s1.player
+            );
+          }
+        }
+
+        s1.dealer.hand.add(s1.deck.hit());
         if (_isOverflow(s1.dealer.hand)) {
           return PlayerWin(
               deck: s1.deck,
@@ -146,6 +164,11 @@ class GameBloc extends Bloc<CounterEvent, GameState> {
         );
     }
     return currentState;
+  }
+
+  bool _canDealerHold(List<PlayingCard> dealerHand) {
+    int value = _getValue(dealerHand);
+    return value >= 17;
   }
 
   bool _isBlackJack(List<PlayingCard> cards) {

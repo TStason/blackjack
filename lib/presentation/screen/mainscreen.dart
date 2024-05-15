@@ -25,7 +25,8 @@ class CounterView extends StatelessWidget {
     ThemeData theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Black Jack')),
-      body: Center(
+      body: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
         child: BlocBuilder<GameBloc, GameState>(
           builder: (context, state) {
             Widget widget;
@@ -35,7 +36,7 @@ class CounterView extends StatelessWidget {
               );
               case PlayerDraw s1: widget = _renderPlayerDraw(s1, theme);
               case DealerDraw s1:
-                // TODO: send delayed action
+              // TODO: send delayed action
                 Future.delayed(const Duration(seconds: 2),() => {
                   context.read<GameBloc>().add(DealerHitCard())
                 });
@@ -125,39 +126,92 @@ class CounterView extends StatelessWidget {
     return _renderGameStarted(state, theme);
   }
 
-  Widget _renderGameStarted(Started state, ThemeData theme) {
-    List<Widget> dealerCards = [];
-    for (var element in state.dealer.hand) {
-      // && state is PlayerDraw
-      if (state.dealer.hand.first == element && state is PlayerDraw) {
-        dealerCards.add(
+  Widget _getPlayerRows(Started state, ThemeData theme, bool isDealer) {
+    final List<PlayingCard> hand;
+    if (isDealer) {
+      hand = state.dealer.hand;
+    } else {
+      hand = state.player.hand;
+    }
+    List<Row> playerRows = [];
+    List<Widget> playerCards = [];
+    var rowCount = 0;
+    for (var i = 0; i < hand.length; i++) {
+      if (rowCount == 3) {
+        playerRows.add(Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: playerCards.toList(),
+        ));
+        playerCards.clear();
+        rowCount = 0;
+      }
+      if (i == 1 && isDealer && state is PlayerDraw) {
+        playerCards.add(
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 5),
               child: Image.asset(
-                "images/cards/suit_red.png",
+                theme.suitAsset,
                 height: 150,
                 width: 105,
               ),
             )
         );
-        continue;
+      } else {
+        playerCards.add(
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              child: _getCardOf(hand[i]),
+            )
+        );
       }
-      dealerCards.add(
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: _getCardOf(element),
-          )
-      );
+
+      rowCount++;
     }
-    List<Widget> playerCards = [];
-    for (var element in state.player.hand) {
-      playerCards.add(
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: _getCardOf(element),
-          )
-      );
+    if (rowCount != 0) {
+      playerRows.add(Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: playerCards,
+      ));
     }
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: playerRows,
+    );
+  }
+
+  Widget _renderGameStarted(Started state, ThemeData theme) {
+    List<Widget> dealerCards = [];
+    // for (var element in state.dealer.hand) {
+    //   // && state is PlayerDraw
+    //   if (state.dealer.hand.first == element && state is PlayerDraw) {
+    //     dealerCards.add(
+    //         Container(
+    //           padding: const EdgeInsets.symmetric(horizontal: 5),
+    //           child: Image.asset(
+    //             "images/cards/suit_red.png",
+    //             height: 150,
+    //             width: 105,
+    //           ),
+    //         )
+    //     );
+    //     continue;
+    //   }
+    //   dealerCards.add(
+    //       Container(
+    //         padding: const EdgeInsets.symmetric(horizontal: 5),
+    //         child: _getCardOf(element),
+    //       )
+    //   );
+    // }
+    // List<Widget> playerCards = [];
+    // for (var element in state.player.hand) {
+    //   playerCards.add(
+    //       Container(
+    //         padding: const EdgeInsets.symmetric(horizontal: 5),
+    //         child: _getCardOf(element),
+    //       )
+    //   );
+    // }
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -165,18 +219,20 @@ class CounterView extends StatelessWidget {
           "Dealer",
           style: theme.textTheme.displayLarge,
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: dealerCards,
-        ),
+        _getPlayerRows(state, theme, true),
+        // Row(
+        //   mainAxisAlignment: MainAxisAlignment.center,
+        //   children: dealerCards,
+        // ),
         Text(
           "Player",
           style: theme.textTheme.displayLarge,
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: playerCards,
-        ),
+        _getPlayerRows(state, theme, false),
+        // Row(
+        //   mainAxisAlignment: MainAxisAlignment.center,
+        //   children: playerCards,
+        // ),
       ],
     );
   }
